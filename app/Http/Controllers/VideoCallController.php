@@ -19,20 +19,11 @@ class VideoCallController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $videoCalls = [];
-
-        if ($user->user_type === UserTypes::TUTOR->value) {
-            $videoCalls = $user->tutorVideoCalls()
-                ->with('student')
-                ->orderBy('scheduled_at')
-                ->get();
-        } 
-        else {
-            $videoCalls = $user->studentVideoCalls()
-                ->with('tutor')
-                ->orderBy('scheduled_at')
-                ->get();
-        }
+        $videoCalls = VideoCall::where('caller_id', $user->id)
+            ->orWhere('receiver_id', $user->id)
+            ->with(['caller', 'receiver'])
+            ->orderBy('scheduled_at')
+            ->get();
 
         return Inertia::render('VideoCalls/Index', [
             'videoCalls' => $videoCalls
@@ -41,21 +32,29 @@ class VideoCallController extends Controller
 
     public function create()
     {
-        $tutors = User::where('user_type', UserTypes::TUTOR->value)->get();
-        $students = User::where('user_type', UserTypes::STUDENT->value)->get();
+        // Get all users except current user
+        $users = User::where('id', '!=', auth()->id())
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'user_type' => $user->user_type->value, 
+                    'label' => "{$user->name} (" . $user->user_type->value . ")"
+            ];
+        });
 
         return Inertia::render('VideoCalls/Create', [
-            'tutors' => $tutors,
-            'students' => $students,
-            'callStatuses' => CallStatuses::cases() 
+            'users' => $users,
+            'callStatuses' => CallStatuses::cases()
         ]);
     }
 
     public function store(VideoCallRequest $request)
     {
         $videoCall = VideoCall::create([
-            'tutor_id' => $request->validated('tutor_id'),
-            'student_id' => $request->validated('student_id'),
+            'caller_id' => auth()->id(),
+            'receiver_id' => $request->validated('receiver_id'),
             'scheduled_at' => $request->validated('scheduled_at'),
             'agora_channel' => Str::random(16),
             'call_status' => CallStatuses::SCHEDULED->value
@@ -69,14 +68,34 @@ class VideoCallController extends Controller
         try {
             $appId = config('services.agora.app_id');
             $appCertificate = config('services.agora.app_certificate');
+            
+            // Debug logging
+            \Log::info('Agora credentials check', [
+                'appId' => $appId ? 'set' : 'missing',
+                'certificate' => $appCertificate ? 'set' : 'missing',
+                'config_path' => config_path('services.php')
+            ]);
+
+            if (!$appId || !$appCertificate) {
+                throw new \Exception('Agora credentials not properly configured');
+            }
+
             $channelName = $videoCall->agora_channel;
             $uid = auth()->id();
-            $role = \App\Utils\RtcTokenBuilder::ROLE_PUBLISHER; 
+            $role = RtcTokenBuilder::ROLE_PUBLISHER;
             $expireTimeInSeconds = 3600;
             $currentTimestamp = now()->getTimestamp();
             $privilegeExpiredTs = $currentTimestamp + $expireTimeInSeconds;
 
-            $token = \App\Utils\RtcTokenBuilder::buildTokenWithUid(
+            // Debug token generation
+            \Log::info('Generating Agora token', [
+                'channel' => $channelName,
+                'uid' => $uid,
+                'role' => $role,
+                'expires' => $privilegeExpiredTs
+            ]);
+
+            $token = RtcTokenBuilder::buildTokenWithUid(
                 $appId,
                 $appCertificate,
                 $channelName,
@@ -85,16 +104,30 @@ class VideoCallController extends Controller
                 $privilegeExpiredTs
             );
 
+            \Log::info('Token generated successfully', [
+                'token_length' => strlen($token)
+            ]);
+
             return Inertia::render('VideoCalls/Show', [
-                'videoCall' => $videoCall->load(['tutor', 'student']),
+                'videoCall' => $videoCall->load(['caller', 'receiver']),
                 'agoraToken' => $token,
                 'agoraAppId' => $appId,
                 'channel' => $channelName,
                 'uid' => $uid,
-                'callStatuses' => CallStatuses::cases()
+                'callStatuses' => CallStatuses::cases(),
+                'debug' => [
+                    'hasAppId' => !empty($appId),
+                    'hasToken' => !empty($token),
+                    'channel' => $channelName
+                ]
             ]);
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to generate video call token');
+            \Log::error('Video call error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->with('error', 'Failed to generate video call token: ' . $e->getMessage());
         }
     }
 

@@ -39,6 +39,12 @@ const showingNavigationDropdown = ref(false);
                                 >
                                     Dashboard
                                 </NavLink>
+                                <NavLink 
+                                    :href="route('video-calls.index')" 
+                                    :active="route().current('video-calls.*')"
+                                >
+                                    Video Call
+                                </NavLink>
                             </div>
                         </div>
 
@@ -145,6 +151,13 @@ const showingNavigationDropdown = ref(false);
                             :active="route().current('dashboard')"
                         >
                             Dashboard
+                        </ResponsiveNavLink>
+
+                        <ResponsiveNavLink 
+                            :href="route('video-calls.index')" 
+                            :active="route().current('video-calls.*')"
+                        >
+                            Video Call
                         </ResponsiveNavLink>
                     </div>
 

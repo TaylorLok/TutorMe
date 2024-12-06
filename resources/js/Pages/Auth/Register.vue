@@ -6,11 +6,16 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
+const props = defineProps({
+    userTypes: Array
+});
+
 const form = useForm({
     name: '',
     email: '',
     password: '',
     password_confirmation: '',
+    user_type: ''
 });
 
 const submit = () => {
@@ -54,6 +59,24 @@ const submit = () => {
                 />
 
                 <InputError class="mt-2" :message="form.errors.email" />
+            </div>
+
+            <div class="mt-4">
+                <InputLabel for="user_type" value="Register as" />
+
+                <select
+                    id="user_type"
+                    class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                    v-model="form.user_type"
+                    required
+                >
+                    <option value="">Select</option>
+                    <option v-for="type in userTypes" :key="type" :value="type">
+                        {{ type.charAt(0).toUpperCase() + type.slice(1) }}
+                    </option>
+                </select>
+
+                <InputError class="mt-2" :message="form.errors.user_type" />
             </div>
 
             <div class="mt-4">

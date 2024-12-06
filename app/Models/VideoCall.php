@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Enums\CallStatuses;
 
 class VideoCall extends Model
 {
     protected $fillable = [
-        'tutor_id', 
-        'student_id', 
+        'caller_id', 
+        'receiver_id', 
         'agora_channel', 
         'scheduled_at', 
         'call_status'
@@ -19,13 +20,13 @@ class VideoCall extends Model
         'call_status' => CallStatuses::class
     ];
 
-    public function tutor()
+    public function caller()
     {
-        return $this->belongsTo(User::class, 'tutor_id');
+        return $this->belongsTo(User::class, 'caller_id');
     }
 
-    public function student()
+    public function receiver()
     {
-        return $this->belongsTo(User::class, 'student_id');
+        return $this->belongsTo(User::class, 'receiver_id');
     }
 }

@@ -14,8 +14,7 @@ class VideoCallRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tutor_id' => 'required|exists:users,id',
-            'student_id' => 'required|exists:users,id',
+            'receiver_id' => 'required|exists:users,id',
             'scheduled_at' => 'required|date|after:now',
         ];
     }
@@ -23,10 +22,8 @@ class VideoCallRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'tutor_id.required' => 'A tutor is required',
-            'tutor_id.exists' => 'Selected tutor is invalid',
-            'student_id.required' => 'A student is required',
-            'student_id.exists' => 'Selected student is invalid',
+            'receiver_id.required' => 'Please select a user to call',
+            'receiver_id.exists' => 'Selected user is invalid',
             'scheduled_at.required' => 'Schedule time is required',
             'scheduled_at.date' => 'Invalid date format',
             'scheduled_at.after' => 'Schedule time must be in the future',

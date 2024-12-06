@@ -19,16 +19,19 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-//VIDEO CONTROLLER
-Route::get('/video-call', [VideoCallController::class, 'index'])->name('video-call');
-Route::post('/video-call/token', [VideoCallController::class, 'generateToken']);
+
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::get('/sessions/{session}', [SessionController::class, 'show'])->name('sessions.show');
+    //video chat
+    Route::get('/video-calls', [VideoCallController::class, 'index'])->name('video-calls.index');
+    Route::get('/video-calls/create', [VideoCallController::class, 'create'])->name('video-calls.create');
+    Route::post('/video-calls', [VideoCallController::class, 'store'])->name('video-calls.store');
+    Route::get('/video-calls/{videoCall}', [VideoCallController::class, 'show'])->name('video-calls.show');
+    Route::patch('/video-calls/{videoCall}/status', [VideoCallController::class, 'updateStatus'])->name('video-calls.update-status');
 });
 
 require __DIR__.'/auth.php';
